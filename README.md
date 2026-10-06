@@ -40,6 +40,7 @@
 ## What This Does
 
 <!-- Three or four sentences: what a user asks for, and what they get back. -->
+FitFindr helps users find thrifted clothing items based on what they are looking for, their size, and their budget. The user enters a natural language request such as “vintage graphic tee under $30,” and FitFindr searches the listings for matching items. When it finds a match, it suggests an outfit using the selected item and the user's wardrobe. Finally, it creates a short fit card caption describing the outfit, item, price, platform, and overall vibe.
 
 
 
@@ -47,15 +48,26 @@
 
 ## Tool Inventory
 
-<!-- Four lines per tool. This is worth 2 points and it's the single most
-     common place students lose them.
+### `search_listings`
 
-     "Returns a list" earns NOTHING. The description has to say what is IN
-     the list.
+- **What it does:** Searches the clothing listings for items matching the user's description and optionally filters them by size and maximum price.
+- **Inputs:** `description` (`str`), `size` (`str | None`), `max_price` (`float | None`)
+- **Returns:** A list of matching listing dictionaries, ordered from best match to lowest match, with fields including `id`, `title`, `description`, `category`, `style_tags`, `size`, `condition`, `price`, `colors`, `brand`, and `platform`.
+- **When it has nothing:** Returns an empty list `[]` when no listings match the search criteria.
 
-     The empty case isn't optional either — it's the thing your loop branches
-     on, and if you don't decide it here you'll discover it as a crash in
-     Milestone 5. -->
+### `suggest_outfit`
+
+- **What it does:** Uses a new clothing item and the user's wardrobe to generate one or two outfit suggestions.
+- **Inputs:** `new_item` (`dict`), `wardrobe` (`dict`)
+- **Returns:** A non-empty string containing outfit suggestions. When the wardrobe has items, the suggestions should name pieces from the user's wardrobe.
+- **When it has nothing:** If the wardrobe is empty, it returns general styling advice for the new item instead of returning an empty string or raising an error.
+
+### `create_fit_card`
+
+- **What it does:** Creates a short social-media-style caption describing the selected item and the suggested outfit.
+- **Inputs:** `outfit` (`str`), `new_item` (`dict`)
+- **Returns:** A two-to-four sentence string that mentions the item, its price, its platform, and the outfit's overall vibe.
+- **When it has nothing:** If `outfit` is empty or contains only whitespace, it returns a descriptive message instead of raising an error.
 
 ### `search_listings`
 
@@ -82,38 +94,248 @@
 
 ## Planning Loop
 
-<!-- Your branch rule, stated as a rule — the condition AND both paths — plus
-     the file and function that holds it.
-
-     Like this:
-       "If search_listings returns an empty list, put a message in the session
-        and stop. Otherwise take the first result and go to suggest_outfit."
-        — agent.py::run_agent
-
-     The grader checks your code against what you claim here, so the file and
-     function have to be real. -->
-
 **Branch rule:**
+
+If `search_listings` returns an empty list, put a helpful message in `session["error"]` explaining what the user could change, then stop the run and return the session. If `search_listings` returns one or more listings, save the results in the session, select the first result, and continue to `suggest_outfit`. After that, save the outfit suggestion in the session, pass it to `create_fit_card` with the selected item, save the fit card in the session, and return the completed session.
 
 **Where it lives:** `agent.py::run_agent`
 
-**How the query is parsed:** <!-- regex, string splitting, or asking the model — say which -->
+**How the query is parsed:**  
+Use regex/string parsing to extract the description, size, and maximum price from the user's query. The parsed values are stored in `session["parsed"]` before calling `search_listings`.
 
-**What moves through the session:** <!-- which fields, in what order -->
+**What moves through the session:**  
+The query is stored first, followed by the parsed description/size/max price. The search results are then stored in `session["search_results"]`. The first result becomes `session["selected_item"]`. That item and the wardrobe are used to produce `session["outfit_suggestion"]`. Finally, the outfit suggestion and selected item produce `session["fit_card"]`. If the search returns no results, `session["error"]` is populated and the later fields remain unset.
 
 ---
 
 ## Sample Run
 
-<!-- Two things go here.
+<(.venv) myathomas@Myas-MacBook-Pro ai201-project2-fitfindr-starter-v2026 % python - <<'PY'
+from tools import search_listings, suggest_outfit, create_fit_card print('search_listings ->, search_listings(graphic tee, max_price=30'))
+print (suggest_outfit ->, suggest_outfit {'title:demo'}, {items: [1})) print(create_fit_card ->, create_fit_card({'title''demo'},
+{'title':'demo}))
+PY
+  File "<stdin>", line 1
+    from tools import search_listings, suggest_outfit, create_fit_card print('search_listings ->, search_listings(graphic tee, max_price=30'))
+                                                                                                                                             ^
+SyntaxError: unmatched ')'
+(.venv) myathomas@Myas-MacBook-Pro ai201-project2-fitfindr-starter-v2026 % clear
+(.venv) myathomas@Myas-MacBook-Pro ai201-project2-fitfindr-starter-v2026 % python app.py fields
+A listing has these fields:
 
-     1. One FULL query and its output, pasted as text.
-     2. Your three per-tool terminal tests — the command and what it printed. -->
+  id             str    lst_001
+  title          str    Vintage Levi's 501 Jeans — Medium Wash
+  description    str    Classic 501s in a perfect medium wash. Some light fading a…
+  category       str    bottoms
+  style_tags     list   ['vintage', 'classic', 'denim', 'streetwear']
+  size           str    W30 L30
+  condition      str    good
+  price          float  38.0
+  colors         list   ['blue', 'indigo']
+  brand          str    Levi's
+  platform       str    depop
+
+A wardrobe item has these fields:
+
+  id             str    w_001
+  name           str    Baggy straight-leg jeans, dark wash
+  category       str    bottoms
+  colors         list   ['dark blue', 'indigo']
+  style_tags     list   ['denim', 'streetwear', 'baggy']
+  notes          str    High-waisted, sits above the hip
+
+These are what search_listings can filter on. Read a few whole listings
+with `python app.py listings` before you write it.
+(.venv) myathomas@Myas-MacBook-Pro ai201-project2-fitfindr-starter-v2026 % python app.py listings --ful
+l -n 6
+{
+  "id": "lst_001",
+  "title": "Vintage Levi's 501 Jeans \u2014 Medium Wash",
+  "description": "Classic 501s in a perfect medium wash. Some light fading at the knees which adds to the vintage look. No rips or stains.",
+  "category": "bottoms",
+  "style_tags": [
+    "vintage",
+    "classic",
+    "denim",
+    "streetwear"
+  ],
+  "size": "W30 L30",
+  "condition": "good",
+  "price": 38.0,
+  "colors": [
+    "blue",
+    "indigo"
+  ],
+  "brand": "Levi's",
+  "platform": "depop"
+}
+
+{
+  "id": "lst_002",
+  "title": "Y2K Baby Tee \u2014 Butterfly Print",
+  "description": "Super cute early 2000s baby tee with butterfly graphic. Fitted crop length. Tag says medium but fits like a small.",
+  "category": "tops",
+  "style_tags": [
+    "y2k",
+    "vintage",
+    "graphic tee",
+    "cottagecore"
+  ],
+  "size": "S/M",
+  "condition": "excellent",
+  "price": 18.0,
+  "colors": [
+    "white",
+    "pink",
+    "purple"
+  ],
+  "brand": null,
+  "platform": "depop"
+}
+
+{
+  "id": "lst_003",
+  "title": "Oversized Flannel Shirt \u2014 Plaid Red/Black",
+  "description": "Classic oversized flannel. Great layering piece. A few tiny pulls in the fabric but nothing visible when worn.",
+  "category": "tops",
+  "style_tags": [
+    "grunge",
+    "vintage",
+    "flannel",
+    "streetwear",
+    "layering"
+  ],
+  "size": "XL (oversized)",
+  "condition": "good",
+  "price": 22.0,
+  "colors": [
+    "red",
+    "black"
+  ],
+  "brand": "Woolrich",
+  "platform": "thredUp"
+}
+
+{
+  "id": "lst_004",
+  "title": "90s Track Jacket \u2014 Navy/White Stripe",
+  "description": "Authentic 90s track jacket with stripe detail down the sleeves. Full zip. Lightweight \u2014 great for layering.",
+  "category": "outerwear",
+  "style_tags": [
+    "90s",
+    "vintage",
+    "athletic",
+    "streetwear"
+  ],
+  "size": "M",
+  "condition": "excellent",
+  "price": 45.0,
+  "colors": [
+    "navy",
+    "white"
+  ],
+  "brand": "Champion",
+  "platform": "poshmark"
+}
+
+{
+  "id": "lst_005",
+  "title": "Corduroy Wide-Leg Pants \u2014 Rust",
+  "description": "Beautiful rust-colored cords in a wide-leg silhouette. High-waisted. Minor pilling on the seat but otherwise great condition.",
+  "category": "bottoms",
+  "style_tags": [
+    "vintage",
+    "cottagecore",
+    "70s",
+    "earth tones"
+  ],
+  "size": "W28",
+  "condition": "good",
+  "price": 32.0,
+  "colors": [
+    "rust",
+    "orange"
+  ],
+  "brand": null,
+  "platform": "depop"
+}
+
+{
+  "id": "lst_006",
+  "title": "Graphic Tee \u2014 2003 Tour Bootleg Style",
+  "description": "Vintage-style bootleg tee with faded graphic. Slightly boxy fit. 100% cotton, soft and worn-in.",
+  "category": "tops",
+  "style_tags": [
+    "graphic tee",
+    "vintage",
+    "grunge",
+    "streetwear",
+    "band tee"
+  ],
+  "size": "L",
+  "condition": "good",
+  "price": 24.0,
+  "colors": [
+    "black"
+  ],
+  "brand": null,
+  "platform": "depop"
+}
+
+(.venv) myathomas@Myas-MacBook-Pro ai201-project2-fitfindr-starter-v2026 % python app.py ask 'vintage graphic tee under $30'
+
+  The planning loop isn't built yet — see the TODO in agent.py.
+
+0 model calls this session
+(.venv) myathomas@Myas-MacBook-Pro ai201-project2-fitfindr-starter-v2026 % python - <<'PY'
+from tools import search_listings, suggest_outfit, create_fit_card
+print('search_listings ->', search_listings('graphic tee', max_price=30))
+print('suggest_outfit ->', suggest_outfit({'title':'demo'}, {'items': []}))
+print('create_fit_card ->', create_fit_card({'title':'demo'}, {'title':'demo'}))
+PY
+
+search_listings -> []
+suggest_outfit -> 
+create_fit_card -> 
+(.venv) myathomas@Myas-MacBook-Pro ai201-project2-fitfindr-starter-v2026 % python app.py fields  
+A listing has these fields:
+
+  id             str    lst_001
+  title          str    Vintage Levi's 501 Jeans — Medium Wash
+  description    str    Classic 501s in a perfect medium wash. Some light fading a…
+  category       str    bottoms
+  style_tags     list   ['vintage', 'classic', 'denim', 'streetwear']
+  size           str    W30 L30
+  condition      str    good
+  price          float  38.0
+  colors         list   ['blue', 'indigo']
+  brand          str    Levi's
+  platform       str    depop
+
+A wardrobe item has these fields:
+
+  id             str    w_001
+  name           str    Baggy straight-leg jeans, dark wash
+  category       str    bottoms
+  colors         list   ['dark blue', 'indigo']
+  style_tags     list   ['denim', 'streetwear', 'baggy']
+  notes          str    High-waisted, sits above the hip
+
+These are what search_listings can filter on. Read a few whole listings
+with `python app.py listings` before you write it.
+(.venv) myathomas@Myas-MacBook-Pro ai201-project2-fitfindr-starter-v2026 % python app.py examples 
+Queries worth trying:
+
+  python app.py ask 'vintage graphic tee under $30'
+  python app.py ask '90s track jacket in size M'
+  python app.py ask 'silk slip dress in midi length under $40'
+  python app.py ask 'platform sneakers size 8'
+  python app.py ask 'denim jacket under $50'
 
 **One full query**
 
 ```
-$ python app.py ask '...'
+ python app.py ask 'designer ballgown size XXS under $5'
 
 ```
 
@@ -147,15 +369,18 @@ $ python -c "from tools import create_fit_card; ..."
 
 **Moment 1**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+What I asked for: I asked AI to help me understand the requirements for the three FitFindr tools and turn the starter-code specifications into clear Tool Inventory descriptions.
+
+What came back: AI explained what each tool takes as input, what it should return, and what should happen when there are no results or the wardrobe is empty.
+
+What I changed: I used those explanations to write specific return values and empty cases in my README instead of using vague descriptions such as “returns a list.”
 
 **Moment 2**
+What I asked for: I asked AI to help me understand how the planning loop should branch when search_listings returns no results.
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+What came back: AI explained that the empty list should be checked before calling suggest_outfit, and that the session should contain an error message explaining what the user could change.
+
+What I changed: I used that explanation to define my branch rule and make session["search_results"] the value the loop checks before deciding whether to continue or stop.
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
