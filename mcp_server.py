@@ -69,12 +69,12 @@ mcp = FastMCP("fitfindr", log_level="WARNING")
 
 # ── TODO: uncomment and fill this in ──────────────────────────────────────────
 #
-# @mcp.tool()
-# def search_listings(
-#     description: str,
-#     size: str | None = None,
-#     max_price: float | None = None,
-# ) -> list[dict]:
+@mcp.tool()
+def search_listings(
+    description: str,
+    size: str | None = None,
+    max_price: float | None = None,
+) -> list[dict]:
 #     """
 #     <-- YOUR DESCRIPTION GOES HERE.
 #
@@ -82,7 +82,7 @@ mcp = FastMCP("fitfindr", log_level="WARNING")
 #         what does it give back when it finds nothing? Written for a reader
 #         who cannot see the code.
 #     """
-#     return _search_listings_impl(description, size, max_price)
+    return _search_listings_impl(description, size, max_price)
 #
 # ──────────────────────────────────────────────────────────────────────────────
 #
@@ -98,6 +98,62 @@ mcp = FastMCP("fitfindr", log_level="WARNING")
 # are not optional here. `description: str` becomes a required string;
 # `max_price: float | None = None` becomes an optional number. Getting these
 # wrong is the most common reason a call is rejected.
+
+# ── Tool 1: search_listings ───────────────────────────────────────────────────
+
+def search_listings(
+    description: str,
+    size: str | None = None,
+    max_price: float | None = None,
+) -> list[dict]:
+    """
+    Search the listings data for items matching a description, and optionally a
+    size and a price ceiling.
+
+    This is the tool that doesn't call the model, which makes it the easiest one
+    to test and the one to move onto MCP in unit 4.
+
+    Args:
+        description: keywords describing what the user wants
+                     (e.g. "vintage graphic tee").
+        size:        a size string to filter by, or None to skip size filtering.
+                     Match case-insensitively — "M" should match "S/M".
+
+                     ⚠️ Read the sizes in the data before you reach for a plain
+                     substring test. `"s" in "us 9"` is True, and so is
+                     `"l" in "xl"`. A filter that returns shoes when someone
+                     asked for a small top reads like a broken search, and it
+                     will quietly cost you in unit 4 when you test criterion 1.
+                     What counts as a size match is part of your spec — decide
+                     it and write it into your Tool Inventory.
+        max_price:   maximum price, inclusive, or None to skip price filtering.
+
+    Returns:
+        A list of matching listing dicts, best match first.
+        **Returns an empty list when nothing matches — an empty list, not None,
+        and not an exception.** Your loop branches on this.
+
+    Each listing dict has these fields:
+        id, title, description, category, style_tags (list), size,
+        condition, price (float), colors (list), brand (str or None), platform
+
+    Note that `brand` is None for most listings. That is deliberate and
+    realistic — thrift listings often have no brand. If something you write
+    assumes a brand is always there, you will find out in unit 4.
+
+    TODO:
+        1. Load every listing with load_listings().
+        2. Filter by max_price and by size, when each is provided.
+        3. Score what's left by keyword overlap with `description`.
+        4. Drop anything scoring zero.
+        5. Sort by score, highest first, and return the listing dicts —
+           at most config.SEARCH_RESULT_LIMIT of them.
+
+    Test it from a terminal before you move on:
+        python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
+    """
+    # TODO: replace this with your implementation
+    return []
 
 
 if __name__ == "__main__":
