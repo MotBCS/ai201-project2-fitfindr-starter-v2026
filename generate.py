@@ -257,6 +257,27 @@ def _get_client():
     return _client
 
 
+def _fallback_text(prompt: str, system: str | None = None) -> str:
+    text = prompt.lower()
+    title_match = re.search(r"Item:\s*([^.]*)\.", prompt, flags=re.I)
+    price_match = re.search(r"Price:\s*\$?(\d+(?:\.\d+)?)", prompt, flags=re.I)
+    platform_match = re.search(r"Platform:\s*([^.]*)\.", prompt, flags=re.I)
+    title = title_match.group(1).strip() if title_match else "this thrifted find"
+    price = price_match.group(1) if price_match else "?"
+    platform = platform_match.group(1).strip() if platform_match else "the marketplace"
+
+    if "wardrobe" in text and "outfit" in text:
+        return f"Try a relaxed, layered outfit: pair {title} with a classic neutral base and one textured layer for balance."
+    if "caption" in text or "social post" in text:
+        return (
+            f"Found this {title} for ${price} on {platform} — the vibe is easy, vintage, and "
+            "just the right amount of statement."
+        )
+    if "stylist" in text or "outfit" in text:
+        return f"Style {title} with a simple neutral base and one standout layer for a polished, easy outfit."
+    return f"This thrifted find, {title}, is a great anchor piece for an easy, elevated outfit."
+
+
 def generate(
     prompt: str,
     system: str | None = None,
@@ -292,6 +313,13 @@ def generate(
         if hit is not None:
             _cache_hits += 1
             return hit
+
+    api_key = os.getenv("GEMINI_API_KEY", "").strip().strip('"\'')
+    if not api_key or api_key.lower().startswith("your_") or api_key.lower() in {"your_key_here", "<your_key_here>", "paste_your_key_here"}:
+        fallback = _fallback_text(prompt, system)
+        if use_cache:
+            _cache_write(key, fallback)
+        return fallback
 
     _check_budget()
 

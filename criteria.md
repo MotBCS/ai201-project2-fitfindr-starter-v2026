@@ -44,57 +44,28 @@ Given a query that matches no listings, the agent stops before calling
 
 ## 3. Something about state
 
-<!-- YOU WRITE THIS ONE.
-
-     How would you know that the item your search found is the same item the
-     next tool received? Name something countable or observable.
-
-     This is the criterion people find hardest, because state failure doesn't
-     look like state failure — it looks like a tool problem. Something that
-     compares session["selected_item"] against what actually reached
-     suggest_outfit is the shape you're after. -->
-
-
+Given a matching query, the item stored in `session["selected_item"]` is the same item that reaches `suggest_outfit`, and the price and title match the first search result — 5 of 5 tries.
 
 **Why this target:**
-
-
+This is a direct state check. If the loop saves the first result in the session and then passes that exact dict to the next tool, the agent has preserved state correctly. A single wrong item would read like a tool failure, but the real bug is in the loop.
 
 ---
 
 ## 4. Something about the fit card
 
-<!-- YOU WRITE THIS ONE.
-
-     The fit card calls a model, so the same input can produce different words
-     each time. That's not a bug — it's the nature of the tool. So what would
-     make it acceptable?
-
-     Think about what you'd actually be unhappy to see. A caption that never
-     mentions the price? Two different items producing the same opening
-     sentence? A card longer than a caption anyone would post? Any of those can
-     be turned into a number. -->
-
-
+Given a query that matches an item, the generated fit card names the item's price in 5 of 5 tries.
 
 **Why this target:**
-
-
+The fit card is meant to read like a real social caption, and the price is part of the item information the user actually needs before buying. This is specific enough to score without depending on the model's sentence style, while still checking the card is useful.
 
 ---
 
 ## 5. Your choice
 
-<!-- YOU WRITE THIS ONE TOO.
-
-     Pick something you actually care about getting right. Speed, the empty
-     wardrobe path, what happens when the model can't be reached, whether the
-     search respects a price ceiling — anything, as long as it names a number
-     or an observable outcome. -->
-
-
+Given a price-limited query, every result returned by `search_listings` costs at most the user's maximum, in 5 of 5 tries.
 
 **Why this target:**
+Price filtering is part of the promised contract for `search_listings`, and it is easy to observe from the session. This checks the tool boundary itself instead of treating the loop as a black box.
 
 
 
